@@ -46,9 +46,13 @@ class Felamimail_Backend_Cache_Imap_Message extends Felamimail_Backend_Cache_Ima
     protected $_folderMap = array();
     
     /**
-     * foreign tables (key => tablename)
+     * Get multiple entries
      *
-     * @var array
+     * @param string|array $_id Ids
+     * @param array $_containerIds all allowed container ids that are added to getMultiple query
+     * @return Tinebase_Record_RecordSet
+     * 
+     * @todo get custom fields here as well
      */
     protected $_foreignTables = array(
         'to'    => array(
@@ -929,11 +933,11 @@ Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . ' Mes
 //        $retorno = $aux->create($_record);
         
 //Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . 'Message create = $retorno ' . print_r($retorno,true));
-        return NULL;
+        return $retorno;        
     }
     
     
-    /*************************** interface functions ****************************/
+    
     /**
      * Search for records matching given filter
      *
