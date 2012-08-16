@@ -546,4 +546,4 @@ Tine.Messenger.Groupie.Roster = function() {
             }
         }
     }
-};
+}
