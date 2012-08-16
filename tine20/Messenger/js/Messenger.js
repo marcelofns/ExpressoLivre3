@@ -713,4 +713,4 @@ Tine.Messenger.Util = {
             return true;
         };
     }
-};
+}
