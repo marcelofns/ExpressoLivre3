@@ -937,7 +937,7 @@ class Tinebase_Core
                       }
                   }
                   else {
-                    $localeString = new Zend_Locale(Zend_Locale::BROWSER);
+                    $localeString = new Zend_Locale();
                   }
                 }
             }
@@ -956,9 +956,7 @@ class Tinebase_Core
         
         // save locale as preference
         if (is_object(Tinebase_Core::getUser()) && ($saveaspreference || self::getPreference()->{Tinebase_Preference::LOCALE} === 'auto')) {
-            $browserLocale = new Zend_Locale(Zend_Locale::BROWSER);
-            self::set('locale', $browserLocale);        
-            self::getPreference()->{Tinebase_Preference::LOCALE} = (string)$browserLocale;
+            self::getPreference()->{Tinebase_Preference::LOCALE} = (string)$locale;
         }
     }
 
