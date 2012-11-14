@@ -259,7 +259,15 @@ Tine.Messenger.ChatHandler = {
         }
 
         // Typing events
+<<<<<<< HEAD
         if (body.length > 0){
+=======
+        if (paused.length > 0) {
+            Tine.Messenger.ChatHandler.setChatState(jid, name + app.i18n._(' stopped typing!'));
+        } else if (composing.length > 0) {
+            Tine.Messenger.ChatHandler.setChatState(jid, name + app.i18n._(' is typing...'));
+        } else if (body.length > 0){
+>>>>>>> Bugs corrigidos: 3731, 3722, 3546, 3767, 3678, 3680, 3681, 3612, 3223
             // Shows the specific chat window
             Tine.Messenger.ChatHandler.showChatWindow(jid, name, type);
             // Set received chat message
