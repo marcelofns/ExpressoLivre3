@@ -698,10 +698,13 @@ msgstr " já existe. Não foi renomeado."
 #: Messenger/js/RosterHandler.js:362
 msgid "was not removed"
 msgstr "não foi removido"
+<<<<<<< HEAD
 
 #: Messenger/js/History.js:7
 msgid "History Chat with"
 msgstr "Histórico de Chat com"
+=======
+>>>>>>> Resolving conflict with master
 
 #: Messenger/js/History.js:16
 msgid "Download"
@@ -794,12 +797,20 @@ msgstr "Terminar video chat"
 #~ msgid_plural "Email Accounts"
 #~ msgstr[0] "Conta de E-mail"
 #~ msgstr[1] "Contas de E-mail"
+<<<<<<< HEAD
+=======
+
+>>>>>>> Resolving conflict with master
 #~ msgid ""
 #~ "You're logged in Messenger. If you leave the page, Messenger will "
 #~ "disconnect!"
 #~ msgstr ""
 #~ "Você está conectado no Messenger. Se sair da página, o Messenger será "
 #~ "desconectado!"
+<<<<<<< HEAD
+=======
+
+>>>>>>> Resolving conflict with master
 #~ msgid " was successfully removed!"
 #~ msgstr " foi excluído com sucesso!"
 
