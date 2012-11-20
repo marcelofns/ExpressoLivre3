@@ -171,7 +171,6 @@ Tine.Messenger.FileTransfer = {
         var from = $(msg).attr('from'),
             to = $(msg).attr('to'), // ME
             jid = Strophe.getBareJidFromJid(from),
-<<<<<<< HEAD
             file = $(msg).find('file'),
             fileName = file.attr('name'),
             fileSize = file.attr('size'),
@@ -243,21 +242,6 @@ Tine.Messenger.FileTransfer = {
                         callbackSend();
                     }
                 });
-=======
-            to = $(msg).attr('to'),
-            file = $(msg).find('file');
-        
-        Ext.MessageBox.buttonText.yes = _('Allow');
-        Ext.MessageBox.buttonText.no = _('Deny');
-        Ext.MessageBox.minWidth = 450;
-        Ext.MessageBox.confirm(_('File Transfer'),
-            jid + ' ' + _('wants to send you a file:') +
-                '<h6 style="padding: 5px 0 0 0;">' + file.attr('name') + 
-                ' (' + file.attr('size') + ' bytes)</h6>',
-            function (id) {
-                var filePath = file.attr('path') + file.attr('name');
-                $('#iframe-download').attr('src', '/download.php?file=' + filePath + '&download=' + id);
->>>>>>> Removing debug lines!
             }
 
             var resources = new Ext.Window({
