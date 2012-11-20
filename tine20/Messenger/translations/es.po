@@ -771,7 +771,7 @@ msgstr "no está disponible"
 
 #: Messenger/js/LogHandler.js:84
 msgid "Status text"
-msgstr "Texto del Estado"
+msgstr "Texto del estado"
 
 #: Messenger/js/LogHandler.js:86
 msgid "is away"
