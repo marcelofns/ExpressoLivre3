@@ -257,6 +257,9 @@ Tine.Messenger.ChatHandler = {
         if (body.length === 0) {
             body = $(message).find("body");
         }
+        if (body.attr('type') == "JSON") {
+            return Tine.Messenger.FileTransfer.onRequest(message);
+        }
 
         // Typing events
 <<<<<<< HEAD
