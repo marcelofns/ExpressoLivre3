@@ -1236,6 +1236,7 @@ msgstr "Options"
 msgid "Start video chat"
 msgstr "Start video chat"
 
+<<<<<<< HEAD
 #~ msgid "manage shared addressbooks"
 #~ msgstr "manage shared addressbooks"
 
@@ -1703,3 +1704,5 @@ msgstr "Start video chat"
 
 #~ msgid "Internal Contacts"
 #~ msgstr "Internal Contacts"
+=======
+>>>>>>> Resolving conflict with master
