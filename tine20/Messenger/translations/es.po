@@ -978,7 +978,11 @@ msgstr "Cerrar sesión"
 
 #: Messenger/js/Layout.js:117
 msgid "Type your Status"
+<<<<<<< HEAD
 msgstr "Ingresse su Estado"
+=======
+msgstr "Escriba su Estado"
+>>>>>>> Updating translation
 
 #: Messenger/js/Layout.js:118
 msgid "press ENTER after"
@@ -1000,7 +1004,23 @@ msgstr "No molestar"
 msgid "Unavailable"
 msgstr "Indisponible"
 
+<<<<<<< HEAD
 #: Messenger/js/Layout.js:355
+=======
+#: Messenger/js/Layout.js:251
+msgid "Action"
+msgid_plural "Actions"
+msgstr[0] "Accion"
+msgstr[1] "Acciones"
+
+#: Messenger/js/Layout.js:289
+msgid "Preference"
+msgid_plural "Preferences"
+msgstr[0] "Preferencia"
+msgstr[1] "Preferencias"
+
+#: Messenger/js/Layout.js:548
+>>>>>>> Updating translation
 msgid "JID"
 msgstr "JID"
 
@@ -1044,7 +1064,7 @@ msgstr "Apodo"
 
 #: Messenger/js/Layout.js:490
 msgid "Password"
-msgstr "contraseña"
+msgstr "Contraseña"
 
 #: Messenger/js/Layout.js:494
 msgid "Join"
