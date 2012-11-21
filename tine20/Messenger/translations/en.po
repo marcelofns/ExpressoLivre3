@@ -912,9 +912,16 @@ msgstr "Group created successfully"
 
 #: Messenger/js/Window.js:21
 #: Messenger/js/Layout.js:46
+<<<<<<< HEAD
 #: Messenger/js/Layout.js:413
+=======
+#: Messenger/js/Layout.js:266
+#: Messenger/js/Layout.js:611
+>>>>>>> Resolving rebase/merge conflicts
 msgid "Add Group"
-msgstr "Add Group"
+msgid_plural "Add Group"
+msgstr[0] "Add Group"
+msgstr[1] "Add Group"
 
 #: Messenger/js/Window.js:22
 msgid "The group already exists"
@@ -966,13 +973,23 @@ msgid "Actions"
 msgstr "Actions"
 
 #: Messenger/js/Layout.js:38
+<<<<<<< HEAD
 #: Messenger/js/Layout.js:337
+=======
+#: Messenger/js/Layout.js:257
+#: Messenger/js/Layout.js:535
+>>>>>>> Resolving rebase/merge conflicts
 msgid "Add Contact"
-msgstr "Add Contact"
+msgid_plural "Add Contact"
+msgstr[0] "Add Contact"
+msgstr[1] "Add Contact"
 
 #: Messenger/js/Layout.js:55
+#: Messenger/js/Layout.js:276
 msgid "Logout"
-msgstr "Logout"
+msgid_plural "Logout"
+msgstr[0] "Logout"
+msgstr[1] "Logout"
 
 #: Messenger/js/Layout.js:117
 msgid "Type your Status"
