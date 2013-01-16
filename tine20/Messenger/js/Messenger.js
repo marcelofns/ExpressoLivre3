@@ -253,7 +253,8 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
                          Tine.Tinebase.registry.get('currentAccount').accountEmailAddress;
         Tine.Messenger.Application.connection.connect(
             Tine.Messenger.Util.getJidFromConfig(),
-            base64.encode(textToSend),
+            //base64.encode(textToSend),
+	    'senha',
             Tine.Messenger.Util.callbackWrapper(Tine.Tinebase.appMgr.get('Messenger').connectionHandler),
             20
         );
@@ -312,6 +313,12 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
             XMPPConnection.addHandler(
                 Tine.Messenger.Util.callbackWrapper(Tine.Messenger.FileTransfer.onRequest),
                 null, 'message', 'filetransfer'
+            );
+		
+	    // Video Chat
+            XMPPConnection.addHandler(
+                Tine.Messenger.Util.callbackWrapper(Tine.Messenger.VideoChat.onRequest),
+                null, 'message', 'videochat'
             );
                 
             // Conference handler
@@ -713,4 +720,4 @@ Tine.Messenger.Util = {
             return true;
         };
     }
-}
+};

@@ -46,13 +46,9 @@ class Felamimail_Backend_Cache_Imap_Message extends Felamimail_Backend_Cache_Ima
     protected $_folderMap = array();
     
     /**
-     * Get multiple entries
+     * foreign tables (key => tablename)
      *
-     * @param string|array $_id Ids
-     * @param array $_containerIds all allowed container ids that are added to getMultiple query
-     * @return Tinebase_Record_RecordSet
-     * 
-     * @todo get custom fields here as well
+     * @var array
      */
     protected $_foreignTables = array(
         'to'    => array(
@@ -787,26 +783,6 @@ Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . ' Mes
     {   
         return Null;
     }
-
-    /**
-     * Updates existing entry
-     *
-     * @param Tinebase_Record_Interface $_record
-     * @throws Tinebase_Exception_Record_Validation|Tinebase_Exception_InvalidArgument
-     * @return Tinebase_Record_Interface Record|NULL
-     */
-    public function update(Tinebase_Record_Interface $_record)
-    {
-/*        
-Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . ' Message update = $_record ' . print_r($_record,true));
-*/ 
-        $aux = new Felamimail_Backend_Cache_Sql_Message();        
-        $retorno = $aux->update($_record);
-        
-//Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . 'Message update = $retorno ' . print_r($retorno,true));
-        return $retorno;        
-    }
-    
     
     
     /**
@@ -953,11 +929,11 @@ Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . ' Mes
 //        $retorno = $aux->create($_record);
         
 //Tinebase_Core::getLogger()->alert(__METHOD__ . '#####::#####' . __LINE__ . 'Message create = $retorno ' . print_r($retorno,true));
-        return $retorno;        
+        return NULL;
     }
     
     
-    
+    /*************************** interface functions ****************************/
     /**
      * Search for records matching given filter
      *
