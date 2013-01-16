@@ -221,6 +221,7 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
         Ext.getCmp('connectloading').show();
         
         this.connectToJabber();
+	this.initVideoChat();
         
         Ext.getCmp("ClientDialog").show();
 
@@ -238,6 +239,13 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
         Tine.Messenger.IM.changeSystemLogonButton(['startup', 'Login']);
     },
     
+    initVideoChat: function(){
+	var rtmfpServerUrl = Ext.util.Format.trim(Tine.Tinebase.registry.get('messenger').messenger.rtmfpServerUrl);
+	Tine.Messenger.VideoChat.enabled = (rtmfpServerUrl != '');
+	Tine.Messenger.VideoChat.rtmfpServerUrl = rtmfpServerUrl;
+	
+    },
+    
     getConnection: function () {
         return Tine.Messenger.Application.connection;
     },
@@ -253,8 +261,7 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
                          Tine.Tinebase.registry.get('currentAccount').accountEmailAddress;
         Tine.Messenger.Application.connection.connect(
             Tine.Messenger.Util.getJidFromConfig(),
-            //base64.encode(textToSend),
-	    'senha',
+            base64.encode(textToSend),
             Tine.Messenger.Util.callbackWrapper(Tine.Tinebase.appMgr.get('Messenger').connectionHandler),
             20
         );
