@@ -793,7 +793,7 @@ msgstr "Adicionar como \"Cc\""
 
 #: js/ContactGrid.js:276
 msgid "Add as \"Bcc\""
-msgstr "Adicionar como \"Bcc\""
+msgstr "Adicionar como \"Cco\""
 
 #: js/ContactGrid.js:287
 msgid "Remove from recipients"
