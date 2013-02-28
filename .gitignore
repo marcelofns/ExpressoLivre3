@@ -8,6 +8,7 @@ tine20/config.inc.php
 tests/tine20/phpunitconfig.inc.php
 tine20/*/*/*FAT*
 tine20/*/js/*-lang-*
+tine20/*/translations/*.mo
 tine20/Tinebase/js/Locale/build/*.js
 scripts/packaging/tine20build/
 tine20/build
@@ -16,5 +17,3 @@ database-references.txt
 *.sql
 /tine20/.idea/
 DEPLOY
-/tine20/.idea/
-*.mo
