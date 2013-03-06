@@ -2687,7 +2687,3 @@ msgstr "Pontilhada"
 msgid "The account is not authorized to login. Please contact the system administrator."
 msgstr "Acesso bloqueado de acordo com a Norma SG018. Favor procurar a SUPGP local."
 
-#: views/jsclient.php:34
-msgid "Wait for the application load completion.<br/>Interrupting it could lead to unwanted behaviours.<br/><br/>To reload the application, press F5."
-msgstr "Aguarde a carga completa da aplicação.<br/>A sua interrupção poderá resultar em comportamentos inesperados.<br/><br/>Para recarregar a aplicação, utilize a tecla F5."
-
