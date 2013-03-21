@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+	       xmlns:s="library://ns.adobe.com/flex/spark" 
+	       xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="init(event)" backgroundColor="0xffffff" width="520" height="400">
+    <fx:Script>
+		<![CDATA[
+						
+			import mx.events.FlexEvent;
+			import flash.media.*;
+			
+			// Armazena o Namespace do Javascript 
+			[Bindable] public var extNamespace:String="";
+					
+			
+			
+			/**
+			 * called when application is loaded 
+			 */
+			private function init(event:FlexEvent):void
+			{
+				// Parâmetros de inicialização
+				var paramObj:Object = Object(this.parameters);
+
+				// Init parameters
+				var keyStr:String;
+				for (keyStr in paramObj) 
+				{
+					// Javascript namespace
+					if ("extNamespace" == keyStr)
+					{
+			            var ext:String = paramObj[keyStr];
+						if (ext.length > 0)
+							extNamespace = ext + ".";
+					}
+				}
+				
+				
+				try{
+				    var mic:Boolean = Microphone.names.length > 0;
+				    var cam:Boolean = Camera.names.length > 0;
+				    
+				    ExternalInterface.call(extNamespace + "checkCameraMicrophoneCallback", cam, mic);
+				} 
+				catch(error:Error)
+				{
+						
+				}
+			}
+
+
+		]]>
+    </fx:Script>
+	
+</s:Application>

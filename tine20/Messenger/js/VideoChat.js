@@ -58,6 +58,8 @@ Tine.Messenger.VideoChat = {
     
     flashVideoWidth: 368,
     flashVideoHeight: 276,
+    cameraDetected: false,
+    microphoneDetected: false,
     
     sendStartCall: function (jid, myId) {
 	var to = typeof jid == 'string' ? jid : jid.node.attributes.jid;
@@ -487,6 +489,32 @@ Tine.Messenger.VideoChat = {
 	if(chat !== null && chat.getTopToolbar !== undefined){
 	    chat.getTopToolbar().getComponent('messenger-chat-video').setDisabled(disabled);
 	}
+    },
+    
+    checkCameraMicrophone: function (){
+	var check = new Ext.FlashComponent({
+	    url: "Messenger/flash/CheckCamMic.swf",
+	    wmode:"direct",
+	    flashParams:{
+		wmode:"direct"
+	    },
+	    flashVars:{
+		useExternalInterface: "true", 
+		extNamespace : "Tine.Messenger.VideoChat"
+	    },
+	    allowScriptAccess:"sameDomain",
+	    flashVersion: "10.0.0",
+	    swfWidth: 1,
+	    swfHeight: 1
+
+	});
+	check.render('ClientDialog');
+    },
+    
+    checkCameraMicrophoneCallback: function (cam, mic){
+	Tine.Messenger.VideoChat.cameraDetected = cam;
+	Tine.Messenger.VideoChat.microphoneDetected = mic;
+	
     }
     
     

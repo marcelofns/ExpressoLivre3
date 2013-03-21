@@ -1,0 +1,986 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+	ADOBE SYSTEMS INCORPORATED
+	Copyright 2008-2011 Adobe Systems Incorporated
+	All Rights Reserved.
+
+	NOTICE: Adobe permits you to use, modify, and distribute this file
+	in accordance with the terms of the license agreement accompanying it.
+	
+	Author: Jozsef Vass
+-->
+	
+<!-- Adobe labs limit width to 520 pixels. -->
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="init(event)" backgroundColor="0xffffff" width="520" height="400">
+	<fx:Script>
+		<![CDATA[
+			import flash.events.SampleDataEvent;
+			
+			import mx.charts.chartClasses.StackedSeries;
+			import mx.collections.ArrayList;
+			import mx.formatters.DateFormatter;
+            import mx.events.FlexEvent;
+
+
+			/*
+			 * Versão e depuração
+			 */
+			// Versao do swf
+			private const version:String = "v 0.0.33";
+			// Depurando o código ou versão de distribuição
+			private const boolDepuracao:Boolean = false;	
+			// Apresentando apenas informações solicitadas
+			private const boolExigeInfo:Boolean = true;	
+
+			/*
+			 * Constantes
+			 */
+			// Tamanho do vídeo
+			private const LocalVideo_height:int=100;
+			private const LocalVideo_width:int=144;
+			private const RemoteVideo_height:int=276;
+			private const RemoteVideo_width:int=368;
+
+			// login/registration states
+			private const LoginNotConnected:String = "LoginNotConnected";
+			private const LoginConnecting:String = "LoginConnecting";
+			private const LoginConnected:String = "LoginConnected";
+			private const LoginDisconnecting:String = "LoginDisconnecting";
+			
+			// call states, only used when LoginConnected		
+			private const CallReady:String = "CallReady";
+			private const CallCalling:String = "CallCalling";
+			private const CallRinging:String = "CallRinging";
+			private const CallEstablished:String = "CallEstablished";
+			private const CallFailed:String = "CallFailed";
+
+			private var ap:activityPanel;
+
+
+			/* 
+			 * Variáveis de rede
+			 */
+			// rtmfp server address (Adobe Cirrus or FMS)
+			[Bindable] private var connectUrl:String;
+
+			// this is the connection to rtmfp server
+			private var netConnection:NetConnection;	
+
+			// outgoing media stream (audio, video, text and some control messages)
+			private var outgoingStream:NetStream;
+			
+			// incoming media stream (audio, video, text and some control messages)
+			private var incomingStream:NetStream;
+			
+			// Acão a ser executada no sucesso da conexão do stream
+			private var actionOnNetStreamSuccess:String=Ok;
+
+			/*
+			 * Variáveis de multimídia
+			 */
+			// Vídeo remoto
+			private var remoteVideo:Video;
+			// Video local
+			private var localVideo:VideoDisplay;
+
+			// available camera deviced
+			private var cameraIndex:int = 0;
+
+			// Som de chamada			
+			private var ringer:Sound;
+			private var ringerChannel:SoundChannel;
+
+			/*
+			 * Outros
+			 */			
+            // Variável que vai receber o nome do usuário
+            [Bindable] public var userName:String;
+
+			// Armazena o Namespace do Javascript 
+			[Bindable] public var extNamespace:String="";
+			
+			// Variável que vai armazenar o nome do usuário do qual
+			// está autorizada a recepção de uma chamada
+			private var sAcceptCallFrom:String="";
+
+			// Armazena o Id da conexão
+			private var myId:String;
+
+
+			/**
+			 * Criando um timer para repetir a adição do callBack 
+			 * caso a ExternalInterface ainda não esteja disponível
+			 * Esta é uma solução ensinada pela própria adobe, porém
+			 * enquanto construía o exemplo notei que o problema está mais ligado
+			 * a forma como você anexa o swf ao html (satay, embed ou swfobject)
+			 * do que o fato da máquina virtual ainda não estar disponível
+			 */
+			private var _timer:Timer = new Timer(300,1);
+
+			private var _timerRosca:Timer;
+			private var Posicao:int;
+			private var cores:Array = 
+				new Array(	/*0xFF0000, 0xFFFF00, 
+							0x00FF00, 0x00FFFF, 
+							0x0000FF, 0xFF00FF, 
+							0x777777, 0x440044,
+							0xFFFFFF, 0xFF7700*/
+							0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 
+							0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 
+							0x777777, 0x777777, 0x777777);
+
+			/*
+			 * Variáveis de Usuário
+			 */					
+			// Id do usuário com o qual a conversa está ocorrendo
+			private var remoteId:String = "";
+
+			/*
+			 * Protocolo interno
+			 */
+			// signaling
+			/**
+			 * Simple request-reply protocol.
+			 * 
+			 * Call flow 1, caller cancels call
+			 * FP1 --- Invite --> FP2
+			 * FP1 --- Cancel --> FP2
+			 * FP1 <-- Ok ------- FP2
+			 * 
+			 * Call flow 2, callee rejects call
+			 * FP1 --- Invite --> FP2
+			 * FP1 <-- Reject --- FP2
+			 * 
+			 * * Call flow 3, call established and caller ends call
+			 * FP1 --- Invite --> FP2
+			 * FP1 <-- Accept --- FP2
+			 * FP1 --- Bye -----> FP2
+			 * FP1 <-- Ok ------- FP2
+			 */
+			private const Relay:String = "relay";
+			private const Invite:String = "invite";
+			private const Cancel:String = "cancel";
+			private const Accept:String = "accept";
+			private const Reject:String = "reject";
+			private const Bye:String = "bye";
+			private const Ok:String = "ok";
+
+
+			/**
+			 * called when application is loaded 
+			 */
+			private function init(event:FlexEvent):void
+			{
+				// Parâmetros de inicialização
+				var paramObj:Object = Object(this.parameters);
+
+				// Init parameters
+				var keyStr:String;
+				for (keyStr in paramObj) 
+				{
+					// Javascript namespace
+					if ("extNamespace" == keyStr)
+					{
+			            var ext:String = paramObj[keyStr];
+						if (ext.length > 0)
+							extNamespace = ext + ".";
+					}
+				}
+				
+				// Player information, javascript, namespace and video chat version
+				status("Player: " + Capabilities.version + " Namespace: " + extNamespace + "\n");
+				status("Version: " + version + "\n");
+
+				status("init(): " + currentState + "\n", true);
+				currentState = LoginNotConnected;
+				status("init(): " + currentState + "\n", true);
+				
+				//Configuring timer to treat callback's 
+				_timer.addEventListener(TimerEvent.TIMER, timerCompleteHandler);
+				_timer.start();
+			}
+
+
+			/**
+			 * Start app and create connections
+			 */
+			private function startApp(conUrl:String, id:String):void
+			{
+				status("\nFuncao startApp");
+
+				connectUrl = conUrl;
+
+				var camera:Camera = Camera.getCamera(cameraIndex.toString());
+				if (camera)
+				{
+					startLocalVideo();
+				}
+				connect(id);
+			}
+
+			/**
+			 * End application
+			 */
+			private function endApp():void
+			{
+				status("Disconnecting.\n");
+				
+				hangupInterno();
+				
+				status("endApp(): " + currentState + "\n", true);
+				currentState = LoginNotConnected;
+				status("endApp(): " + currentState + "\n", true);
+
+				netConnection.close();
+				netConnection = null;
+			}
+
+			/**
+			 * Shows informations to monitoring in a status area and log file 
+			 */
+			private function status(msg:String, bStatus:Boolean=false):void
+			{
+				if (!boolExigeInfo || boolExigeInfo && bStatus)
+				{
+					statusArea.text += msg;
+					statusArea.validateNow();
+					trace("ScriptDebug: " + msg);
+				}
+			}
+
+
+			/*
+			 * Callbacks
+			 */
+			/**
+			 * At the end of timer, tries to install callbacks again
+			 */
+			private function timerCompleteHandler(event:TimerEvent):void
+			{
+				if(ExternalInterface.available)
+				{
+					try 
+					{
+						status("Adding Callback's\n");
+						ExternalInterface.addCallback("startApp", startApp);
+						ExternalInterface.addCallback("acceptCallFrom", acceptCallFrom);
+						ExternalInterface.addCallback("placeCall", placeCall);
+						ExternalInterface.addCallback("hangup", hangup);
+						ExternalInterface.addCallback("endApp", endApp);
+						ExternalInterface.addCallback("getId", getId);
+						ExternalInterface.addCallback("startRing", startRing);
+						ExternalInterface.addCallback("stopRing", stopRing);
+						status("Callbacks added");
+						// Inform JS app is loaded
+						ExternalInterface.call(extNamespace + "appLoaded");
+					} 
+					catch(error:Error)
+					{
+						// If failed, try again
+						status("Calback not added\n")
+						status("\n"+error.message);
+						_timer.start();
+					}
+					status("EXT: " + extNamespace + "\n");
+				}
+			}
+
+			/**
+			 * Just accept calling from this person
+			 */
+			private function acceptCallFrom(userName:String):void
+			{
+				status("Accept Call From: "+ userName + ".\n");
+				sAcceptCallFrom = userName;
+				// Put an activity panel in a visible area to the user knows there's 
+				// someone is being called
+				var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+				if (ap)
+				{
+					status("Removin activity panel\n");
+					remoteVideoDisplay.removeChild(ap);
+				}
+				ap=new activityPanel();
+				ap.name="AC";
+				status("width: " + remoteVideoDisplay.width + " height: " + remoteVideoDisplay.height + "\n");
+				remoteVideoDisplay.addChild(ap);
+				status("ac.width: " + ap.width + " ac.height: " + ap.height + "\n");
+ 				ap.x = (remoteVideoDisplay.width - ap.width)/2;
+				ap.y = (remoteVideoDisplay.height - ap.height)/2;
+			}
+
+			private function onHangup():void
+			{
+				// signaling based on state
+				if (CallEstablished == currentState)
+				{
+					status("External Calling\n", true);
+					ExternalInterface.call(extNamespace + "callEnded");
+				}
+				currentState = CallReady;
+			}
+
+
+			/**
+			 * hangup call
+			 */
+			private function hangup():void
+			{
+				if (CallReady == currentState)
+				{
+					// No active call, just inform to JS
+					ExternalInterface.call(extNamespace + "callEnded");
+					status("Callready\n", true);
+					// No more remoteId 
+					remoteId = "";
+					// No more waiting call
+					sAcceptCallFrom = "";
+					var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+					if (ap)
+					{
+						status("Removing activity panel\n");
+						remoteVideoDisplay.removeChild(ap);
+					}
+				}
+				else
+				{ 
+					hangupInterno();
+				}
+			}
+
+
+			/**
+			 * hangup call
+			 */
+			private function hangupInterno():void
+			{
+				status("Hanging up call\n" + currentState + "\n");
+				
+				// signaling based on state
+				if (CallEstablished == currentState)
+				{
+					netConnection.call(Relay, null, remoteId, Bye, this.userName);
+				}
+				else if (CallCalling == currentState)
+				{ 
+					netConnection.call(Relay, null, remoteId, Cancel, this.userName);	
+				}
+				else if (CallRinging == currentState)
+				{
+					netConnection.call(Relay, null, remoteId, Reject, this.userName);	
+				}
+				else if (CallReady == currentState)
+				{
+					// No active call, just inform to JS
+					//ExternalInterface.call(extNamespace + "callEnded");
+					//ExternalInterface.call(extNamespace + "callEnded");
+					status("Callready\n", true);
+				}
+				else 
+				{
+					return;
+				}
+				
+				onHangup();
+
+				// No ring
+				stopRing();
+
+				// Close conections				
+				if (incomingStream)
+				{
+					incomingStream.close();
+					incomingStream.removeEventListener(NetStatusEvent.NET_STATUS, incomingStreamHandler);
+				}
+				if (outgoingStream)
+				{
+					outgoingStream.close();
+					outgoingStream.removeEventListener(NetStatusEvent.NET_STATUS, outgoingStreamHandler);
+				}
+				
+				incomingStream = null;
+				outgoingStream = null;
+
+				// Close remote video
+				if(remoteVideo)
+					remoteVideoDisplay.removeChild(remoteVideo);
+				remoteVideo = null;
+
+				// Remove activity panel				
+				var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+				if (ap)
+				{
+					status("Removing activity panel\n");
+					remoteVideoDisplay.removeChild(ap);
+					ap=null;
+				}
+				
+				// No more remoteId 
+				remoteId = "";
+				
+				// No more waiting call
+				sAcceptCallFrom = "";
+
+			}
+
+			/**
+			 * Place a call to user/identity 
+			 */
+			private function placeCall(user:String, identity:String):void
+			{
+				status("Calling " + user + ", id: " + identity + "\n");
+							
+				if (identity.length != 64)
+				{	
+					status("Invalid remote ID, call failed\n");
+					status("placeCall(): " + currentState + "\n", true);
+					currentState = CallFailed;
+					status("placeCall(): " + currentState + "\n", true);
+					return;
+				}
+
+				netConnection.call(Relay, null, identity, Invite, this.userName);
+							
+				// caller publishes media stream
+				outgoingStream = new NetStream(netConnection, NetStream.DIRECT_CONNECTIONS);
+				outgoingStream.addEventListener(NetStatusEvent.NET_STATUS, outgoingStreamHandler);
+				outgoingStream.publish("media-caller");
+							
+				var o:Object = new Object
+				o.onPeerConnect = function(caller:NetStream):Boolean
+				{
+					status("Callee connecting to media stream: " + caller.farID + "\n");
+					ExternalInterface.call(extNamespace + "callStarted", caller.farID);
+
+					return true; 
+				}
+				outgoingStream.client = o;
+
+				startAudio();
+				startLocalVideo();
+														
+				// caller subscribes to callee's media stream
+				incomingStream = new NetStream(netConnection, identity);
+				incomingStream.addEventListener(NetStatusEvent.NET_STATUS, incomingStreamHandler);
+				incomingStream.play("media-callee");
+				
+				// set volume for incoming stream
+				var st:SoundTransform = new SoundTransform();
+				incomingStream.soundTransform = st;
+							
+				var i:Object = new Object;
+				i.onIm = function(name:String, text:String):void
+				{
+					//textOutput.text += name + ": " + text + "\n";
+				}
+				incomingStream.client = i;
+
+				startRemoteVideo();								
+
+				remoteId = identity;
+
+				var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+				if (ap)
+				{
+					status("Removing activity panel\n");
+					remoteVideoDisplay.removeChild(ap);
+				}
+
+				// Creates the activity panel
+				ap=new activityPanel();
+				ap.name="AC";
+				remoteVideoDisplay.addChild(ap);
+				// center panel
+ 				ap.x = (remoteVideoDisplay.width - ap.width)/2;
+				ap.y = (remoteVideoDisplay.height - ap.height)/2;
+
+				status("placeCall(): " + currentState + "\n", true);
+				currentState = CallCalling;
+				status("placeCall(): " + currentState + "\n", true);
+			}
+			
+			/**
+			 * User accepted call
+			 */
+			private function acceptCall():void
+			{
+				status("Funcao acceptCall\n");
+				stopRing();
+
+				incomingStream.receiveAudio(true);
+				incomingStream.receiveVideo(true);
+
+				// callee publishes media
+				outgoingStream = new NetStream(netConnection, NetStream.DIRECT_CONNECTIONS);
+				outgoingStream.addEventListener(NetStatusEvent.NET_STATUS, outgoingStreamHandler);
+				outgoingStream.publish("media-callee");
+
+				var o:Object = new Object
+				o.onPeerConnect = function(caller:NetStream):Boolean
+				{
+					status("Caller connecting to media stream: " + caller.farID + "\n");
+
+					return true;
+				}
+				outgoingStream.client = o;
+
+				netConnection.call(Relay, null, remoteId, Accept, this.userName);
+				
+				startRemoteVideo();
+				startLocalVideo();
+				startAudio();
+
+				// remove activity panel if it exists
+				var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+				if (ap)
+				{
+					status("Removendo painel de atividade\n");
+					remoteVideoDisplay.removeChild(ap);
+				}
+
+				status("acceptCall(): " + currentState + "\n", true);
+				currentState = CallEstablished;
+				status("acceptCall(): " + currentState + "\n", true);
+
+				// inform JS
+				ExternalInterface.call(extNamespace + "callStarted", remoteId);
+			}
+						
+			/*
+			 * Connection  
+			 */
+			private function connect(username:String):void
+			{
+				status("Funcao onConnect: " + username + "\n");
+				
+				this.userName = username;
+
+				netConnection = new NetConnection();
+				netConnection.proxyType = "HTTP";
+				netConnection.addEventListener(NetStatusEvent.NET_STATUS, netConnectionHandler);
+
+				status("Proxy Type: " + netConnection.proxyType + "\n");
+					
+				
+				// incoming call coming on NetConnection object
+				var c:Object = new Object();
+				c.onRelay = function(id:String, action:String, name:String):void
+				{
+					status("Request: " + action + " from: " + id + " (" + name + ")\n");
+
+					if (Invite == action)
+					{
+						if (currentState == CallReady)
+						{
+							startRing();
+
+							if (sAcceptCallFrom.length && name==sAcceptCallFrom)
+							{
+								status("onRelay()CallReady: " + currentState + "\n", true);
+								currentState = CallRinging;
+								status("onRelay()CallReady: " + currentState + "\n", true);
+	
+								// callee subscribes to media, to be able to get the remote user name
+								incomingStream = new NetStream(netConnection, id);
+								incomingStream.addEventListener(NetStatusEvent.NET_STATUS, incomingStreamHandler);
+								incomingStream.play("media-caller");
+								
+								// set volume for incoming stream
+								var st:SoundTransform = new SoundTransform();
+								incomingStream.soundTransform = st;
+								
+								incomingStream.receiveAudio(false);
+								incomingStream.receiveVideo(false);
+							
+								var i:Object = new Object;
+							
+								i.onIm = function(name:String, text:String):void
+								{
+									//textOutput.text += name + ": " + text + "\n";
+									//textOutput.validateNow();
+								}
+								incomingStream.client = i;
+								
+								remoteId = id;
+								acceptCall();
+							}
+							else
+							{
+								status("Call rejected due to state: I'm busy\n");
+								actionOnNetStreamSuccess = Reject;
+								netConnection.call(Relay, null, remoteId, Reject, this.userName);
+							}						
+						}
+						else
+						{
+							status("Call rejected due to state: " + currentState + "\n");
+							actionOnNetStreamSuccess = Reject;
+						}
+					}
+					else if (Reject == action)
+					{
+						//currentState = CallReady;
+						
+						hangupInterno();
+					}
+					else if (Accept == action)
+					{
+						if (currentState != CallCalling)
+						{
+							status("Call accept: Wrong call state: " + currentState + "\n");
+							return;
+						}
+
+						var ap:activityPanel = activityPanel(remoteVideoDisplay.getChildByName("AC"));
+						if (ap)
+						{
+							status("Removendo painel de atividade\n");
+							remoteVideoDisplay.removeChild(ap);
+						}
+
+						status("onRelay()Accept: " + currentState + "\n", true);
+						currentState = CallEstablished;
+						status("onRelay()Accept: " + currentState + "\n", true);
+					}
+					else if (Bye == action)
+					{
+						netConnection.call(Relay, null, id, Ok, this.userName);
+						onHangup();
+					}
+					else if (Cancel == action)
+					{
+						netConnection.call(Relay, null, id, Ok, this.userName);
+						hangupInterno();
+					}
+				}
+
+   				netConnection.client = c;
+
+				try
+				{
+					netConnection.connect(connectUrl);
+				}
+				catch (e:ArgumentError)
+				{
+					status("Incorrect connect URL\n");
+					return;
+				}
+				status("Connecting to " + connectUrl + "\n");
+				
+				status("connect(): " + currentState + "\n", true);
+				currentState = LoginConnecting;	
+				status("connect(): " + currentState + "\n", true);
+
+			}
+
+			private function netConnectionHandler(event:NetStatusEvent):void
+			{
+				status("NetConnection event: " + event.info.code + "\n");
+				
+            	switch (event.info.code)
+            	{
+                	case "NetConnection.Connect.Success":
+                		connectSuccess();
+                    	break;
+                    	
+                    case "NetConnection.Connect.Closed":
+                    case "NetStream.Connect.Closed":
+						status("hangup Calling\n");
+                    	hangupInterno();
+                    	break;
+                    	
+                    case "NetStream.Connect.Success":
+                    	// we get this when other party connects to our outgoing stream
+                    	status("Connection from: " + event.info.stream.farID + "\n");
+						if (Reject == actionOnNetStreamSuccess)
+						{
+							remoteId = event.info.stream.farID;
+							netConnection.call(Relay, null, remoteId, Reject, this.userName);
+							actionOnNetStreamSuccess = Ok;
+						}	
+                    	break;
+                    	
+                    case "NetConnection.Connect.Failed":
+                    	status("Unable to connect to " + connectUrl + "\n");
+						status("netConnectionHandler(): " + currentState + "\n", true);
+                    	currentState = LoginNotConnected;
+						status("netConnectionHandler(): " + currentState + "\n", true);
+                    	break;
+             	}
+         	}
+			
+			private function outgoingStreamHandler(event:NetStatusEvent):void
+			{
+				//status("Outgoing stream event: " + event.info.code + "\n");
+				//startAudio();
+			}
+
+			private function incomingStreamHandler(event:NetStatusEvent):void
+			{
+				//status("Incoming stream event: " + event.info.code + "\n");
+				//startAudio();
+			}
+			
+			// connection to rtmfp server succeeded and we register our peer ID with an id exchange service
+			// other clients can use id exchnage service to lookup our peer ID
+			private function connectSuccess():void
+			{
+				status("Connected, my ID: " + netConnection.nearID + " " + this.userName + "\n");
+				status("Proxy Type: " + netConnection.connectedProxyType + "\n");
+
+				myId = netConnection.nearID;
+				status("connectSuccess(): " + currentState + "\n", true);
+				currentState = CallReady;
+				status("connectSuccess(): " + currentState + "\n", true);
+				ExternalInterface.call(extNamespace + "myId", myId);
+			}
+
+			/**
+			 * 
+			 * Return local Id
+			 */
+			private function getId():String
+			{
+				return myId;
+			}
+
+
+			/**
+			 * 
+			 * startAudio
+			 */			
+			private function startAudio():void
+			{
+				status("Start Audio\n");
+				var mic:Microphone = Microphone.getMicrophone();
+				if (mic && outgoingStream)
+				{
+					outgoingStream.attachAudio(mic);
+				}
+			}
+
+			/**
+			 * 
+			 * startLocalVideo 
+			 */
+			private function startLocalVideo(event:Event = null):void
+			{
+				status("startLocalVideo\n");
+				cameraIndex = 0;
+				
+				var camera:Camera = Camera.getCamera(cameraIndex.toString());
+				
+				if (camera)
+				{
+					camera.setMode(320, 240, 15);
+					camera.setQuality(0, 100);
+					status("Camera: 640x480\n");
+				}
+				
+				var local:DisplayObject=remoteVideoDisplay.getChildByName("localVideo");
+				if (!local)
+				{
+					localVideo = new VideoDisplay();
+					localVideo.height=LocalVideo_height;
+					localVideo.width=LocalVideo_width;
+
+					localVideo.x = RemoteVideo_width - LocalVideo_width;
+					localVideo.y = RemoteVideo_height - LocalVideo_height;
+					localVideo.name = "localVideo";
+
+					remoteVideoDisplay.addChild(localVideo);
+				}
+					
+				localVideo.attachCamera(camera);
+				remoteVideoDisplay.addEventListener(MouseEvent.MOUSE_DOWN, videoStartDrag);
+				remoteVideoDisplay.addEventListener(MouseEvent.MOUSE_UP, videoStopDrag);
+				
+				if (outgoingStream)
+				{
+					outgoingStream.attachCamera(camera);
+				}
+
+			}
+
+			/**
+			 * 
+			 * startRemoteVideo
+			 */
+			private function startRemoteVideo():void
+			{
+				var remote:DisplayObject=remoteVideoDisplay.getChildByName("remoteVideo");
+				if (remote)
+				{
+					status("Removing remote video\n");
+					remoteVideoDisplay.removeChild(remote);
+				}
+
+				remoteVideo = new Video();
+				remoteVideo.width = RemoteVideo_width;
+				remoteVideo.height = RemoteVideo_height;
+				remoteVideo.name = "remoteVideo";
+				remoteVideo.attachNetStream(incomingStream);
+				remoteVideoDisplay.addChildAt(remoteVideo, 1);
+
+				status("End removing\n");
+
+			}
+
+			/**
+			 * 
+			 * startRing
+			 */			
+   			private function startRing():void
+   			{				
+				status("Ring\n");
+   				ringer = new Sound();
+   				
+  				ringer.addEventListener("sampleData", ringTone);
+  				ringerChannel = ringer.play();
+   			}
+   			
+			/**
+			 * 
+			 * stopRing
+			 */
+   			private function stopRing():void
+   			{
+				status("Stop Ring\n");
+   				if (ringerChannel)
+   				{
+   					ringerChannel.stop();
+   				
+   					ringer.removeEventListener("sampleData", ringTone);
+   					
+   					ringer = null;
+   					ringerChannel = null;
+   				}
+   			}
+   			
+			/**
+			 * 
+			 * ringTone
+			 */
+   			private function ringTone(event:SampleDataEvent):void
+   			{	
+    			for (var c:int=0; c<8192; c++) 
+    			{
+    				var pos:Number = Number(c + event.position) / Number(6 * 44100);
+    				var frac:Number = pos - int(pos);
+    				var sample:Number;
+    				if (frac < 0.066)
+    				{
+      					 sample = 0.4 * Math.sin(2* Math.PI / (44100/784) * (Number(c + event.position)));
+      				}
+      				else if (frac < 0.333)
+      				{
+      					sample = 0.2 * (Math.sin(2* Math.PI / (44100/646) * (Number(c + event.position)))
+      						+ Math.sin(2* Math.PI / (44100/672) * (Number(c + event.position)))
+      						+ Math.sin(2* Math.PI / (44100/1034) * (Number(c + event.position)))
+      						+ Math.sin(2* Math.PI / (44100/1060) * (Number(c + event.position))));
+      				}
+      				else
+      				{
+      					sample = 0;	
+      				}
+      				event.data.writeFloat(sample);
+      				event.data.writeFloat(sample);
+      			}
+    		}
+
+
+			/**
+			 * Drag vars
+			 */
+			private var offsetX:Number;
+			private var offsetY:Number;
+			private var videoObject:DisplayObject;
+			
+			/**
+			 * videoStartDrag
+			 */
+			private function videoStartDrag(evt:MouseEvent):void{
+				if (evt.target.name=="localVideo")
+				{
+					offsetX = evt.stageX - evt.target.x;
+					offsetY = evt.stageY - evt.target.y;
+					videoObject = DisplayObject(evt.target); 
+					remoteVideoDisplay.addEventListener(MouseEvent.MOUSE_MOVE, videoDrag);
+				}
+			}
+			
+			/**
+			 * videoStopDrag
+			 */
+			private function videoStopDrag(evt:MouseEvent):void{
+				remoteVideoDisplay.removeEventListener(MouseEvent.MOUSE_MOVE, videoDrag);
+			}
+			
+			/**
+			 * videoDrag
+			 */
+			private function videoDrag(evt:MouseEvent):void{
+				if (!evt.buttonDown)
+					videoStopDrag(evt);
+				else
+				{
+					var posX:Number = evt.stageX - offsetX;
+					var posY:Number = evt.stageY - offsetY;
+					if (posX<0)
+						posX = 0;
+					else if (posX + videoObject.width > RemoteVideo_width)
+						posX = RemoteVideo_width - videoObject.width;
+					if (posY<0)
+						posY = 0;
+					else if (posY + videoObject.height > RemoteVideo_height)
+						posY = RemoteVideo_height - videoObject.height;
+					videoObject.x = posX; 
+					videoObject.y = posY;
+					
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Style>
+		.buttonStyle {
+			color: "0x000000";
+			textRollOverColor: "0x000000";
+			textSelectedColor: "0x000000";
+		}
+		
+	</fx:Style>
+	
+	<s:states>
+		<s:State name="LoginNotConnected"/>
+		<s:State name="LoginConnecting"/>
+		<s:State name="LoginConnected"/>
+		<s:State name="LoginDisconnecting"/>
+		<s:State name="CallReady"/>
+		<s:State name="CallCalling"/>
+		<s:State name="CallRinging"/>
+		<s:State name="CallEstablished"/>
+		<s:State name="CallFailed"/>
+	</s:states>
+	
+	<s:Group>
+		<s:layout>
+			<s:VerticalLayout />
+		</s:layout>	
+		<s:HGroup>
+			<mx:VideoDisplay id="remoteVideoDisplay" width="{RemoteVideo_width}" height="{RemoteVideo_height}" />
+		</s:HGroup>
+		<mx:ViewStack id="optionsStack" visible="{boolDepuracao}" borderStyle="solid" creationPolicy="all" >
+			<s:NavigatorContent label="STATUS" color="0xffffff">
+				<s:layout>
+					<s:VerticalLayout/>
+				</s:layout>
+				<s:TextArea id="statusArea" width="368" height="120" editable="false" verticalScrollPolicy="auto" color="black"/>
+				<s:Button label="CLEAR" click="statusArea.text=''" styleName="buttonStyle" />
+			</s:NavigatorContent>
+		</mx:ViewStack>
+	</s:Group>
+</s:Application>

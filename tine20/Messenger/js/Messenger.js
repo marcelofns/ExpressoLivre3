@@ -220,9 +220,9 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
         // Loading Messenger
         Ext.getCmp('connectloading').show();
         
-        this.connectToJabber();
 	this.initVideoChat();
-        
+        this.connectToJabber();
+	        
         Ext.getCmp("ClientDialog").show();
 
         Ext.getCmp('ClientDialog').status = (status != null) ? status : IMConst.ST_AVAILABLE.id;
@@ -240,6 +240,7 @@ Tine.Messenger.Application = Ext.extend(Tine.Tinebase.Application, {
     },
     
     initVideoChat: function(){
+	Tine.Messenger.VideoChat.checkCameraMicrophone();
 	var rtmfpServerUrl = Ext.util.Format.trim(Tine.Messenger.registry.get('rtmfpServerUrl'));
 	Tine.Messenger.VideoChat.enabled = (rtmfpServerUrl != '' && rtmfpServerUrl !== null);
 	Tine.Messenger.VideoChat.rtmfpServerUrl = rtmfpServerUrl;
